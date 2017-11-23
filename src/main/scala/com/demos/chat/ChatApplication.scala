@@ -1,12 +1,18 @@
 package com.demos.chat
 
+import java.util.concurrent.TimeUnit
+
 import akka.NotUsed
-import akka.actor.{ActorSystem, PoisonPill}
+import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
+import akka.pattern.ask
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.util.Timeout
+import com.demos.chat.ConnectionActor.Connected
+import com.demos.chat.session.SessionRepository.StartSession
 import io.circe.parser.decode
 
 import scala.io.StdIn
@@ -22,10 +28,13 @@ object ChatApplication extends JsonUtils {
   implicit val system = ActorSystem("akka-chat-server")
   implicit val materializer = ActorMaterializer()
   implicit val executionContext = system.dispatcher
+  implicit val timeout = Timeout(5, TimeUnit.SECONDS)
 
   def main(args: Array[String]): Unit = {
 
-    val routes = helloRoute ~ simpleWebSocketRoute ~ chatRoute
+    val gateway = system.actorOf(Gateway.props(), "gateway")
+
+    val routes = helloRoute ~ simpleWebSocketRoute ~ chatRoute(gateway)
     val bindingFuture = Http().bindAndHandle(routes, "127.0.0.1", 8080)
 
     println("RETURN to stop...")
@@ -54,30 +63,38 @@ object ChatApplication extends JsonUtils {
       }
     }
 
-  def chatRoute =
+  def chatRoute(gateway: ActorRef) = {
     path("chat") {
-      handleWebSocketMessages(chatFlow())
+      get {
+        onSuccess(gateway.ask(StartSession).mapTo[ActorRef]) {
+          session => handleWebSocketMessages(chatFlow(session))
+        }
+      }
     }
+  }
 
-  private def chatFlow(): Flow[Message, Message, NotUsed] = {
+  private def chatFlow(session: ActorRef): Flow[Message, Message, NotUsed] = {
 
-    val connectionActor = system.actorOf(ConnectionActor.props())
+    val connectionActor = system.actorOf(ConnectionActor.props(session))
 
     val incomingMessages: Sink[Message, NotUsed] =
       Flow[Message].map {
         case TextMessage.Strict(messageText) =>
           decode[ChatRequest](messageText) match {
-            case Right(request) => connectionActor ! request
-            case Left(error) => connectionActor ! Error(error.getMessage)
+            case Right(request) => request match {
+              case HeartBeat => println("Received heartbeat")
+              case _ => connectionActor ! request
+            }
+            case Left(error) => connectionActor ! ErrorResponse(error.getMessage)
           }
-        case _ => connectionActor ! Error("Unsupported operation")
+        case _ => connectionActor ! ErrorResponse("Unsupported operation")
       }.to(Sink.actorRef(connectionActor, PoisonPill))
 
     val outgoingMessages: Source[Message, NotUsed] =
       Source
         .actorRef[ChatResponse](10, OverflowStrategy.fail)
         .mapMaterializedValue { webSocketActor =>
-          connectionActor ! ConnectionActor.Connected(webSocketActor)
+          connectionActor ! Connected(webSocketActor)
           NotUsed
         }
         .map {
