@@ -81,13 +81,10 @@ object ChatApplication extends JsonUtils {
       Flow[Message].map {
         case TextMessage.Strict(messageText) =>
           decode[ChatRequest](messageText) match {
-            case Right(request) => request match {
-              case HeartBeat => println("Received heartbeat")
-              case _ => connectionActor ! request
-            }
-            case Left(error) => connectionActor ! ErrorResponse(error.getMessage)
+            case Right(request) => request
+            case Left(error) => ErrorResponse(error.getMessage)
           }
-        case _ => connectionActor ! ErrorResponse("Unsupported operation")
+        case _ => ErrorResponse("Unsupported operation")
       }.to(Sink.actorRef(connectionActor, PoisonPill))
 
     val outgoingMessages: Source[Message, NotUsed] =

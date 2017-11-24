@@ -21,6 +21,7 @@ class ConnectionActor(session: ActorRef) extends Actor {
   }
 
   def connected(webSocketActor: ActorRef): Receive = {
+    case HeartBeat => println("Received heartbeat.")
     case chatRequest: ChatRequest => session ! chatRequest
     case chatResponse: ChatResponse => webSocketActor ! chatResponse
     case wrong => println(s"ConnectionActor: received wrong message [${wrong.toString}, ${sender().toString()}]")
