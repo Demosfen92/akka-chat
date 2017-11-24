@@ -39,7 +39,9 @@ class Session(id: UUID, gateway: ActorRef) extends Actor {
     case _ => connectionActor ! ErrorResponse("Unexpected message")
   }
 
-  def authorized(connectionActor: ActorRef, username: String): Receive = ???
+  def authorized(connectionActor: ActorRef, username: String): Receive = {
+    case _ => println("TODO")
+  }
 }
 
 object Session {

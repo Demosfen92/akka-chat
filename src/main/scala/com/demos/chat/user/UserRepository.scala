@@ -1,6 +1,9 @@
 package com.demos.chat.user
 
-import akka.actor.{Actor, Props}
+import java.util.UUID
+
+import akka.actor.{Actor, ActorRef, Props}
+import com.demos.chat.session.SessionRepository.LoginWithSecret
 import com.demos.chat.user.UserRepository.{GetSecret, Register}
 import com.demos.chat.user.UserRepository.RegistrationResults._
 
@@ -26,7 +29,8 @@ class UserRepository extends Actor {
         sender() ! RegistrationSuccessful
       case Left(failedResult) => sender() ! failedResult
     }
-    case GetSecret(username) => sender ! users.get(username)
+    case GetSecret(id, username, password, replyTo) =>
+      sender() ! LoginWithSecret(id, username, password, users.get(username), replyTo)
   }
 }
 
@@ -35,7 +39,7 @@ object UserRepository {
   def props() = Props(new UserRepository())
 
   case class Register(username: String, password: String)
-  case class GetSecret(username: String)
+  case class GetSecret(sessionId: UUID, username: String, password: String, replyTo: ActorRef)
 
   object RegistrationResults {
     sealed trait RegistrationResult
