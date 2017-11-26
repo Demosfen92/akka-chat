@@ -20,7 +20,7 @@ class SessionRepository(gateway: ActorRef) extends Actor {
   def sessionRepository(sessions: Map[String, UUID]): Receive = {
     case StartSession => sender() ! context.actorOf(Session.props(UUID.randomUUID(), gateway))
     case Login(id, username, password) => sessions.get(username) match {
-      case Some(_) => sender() ! AlreadyLogin(username)
+      case Some(_) => sender() ! AlreadyIn(username)
       case None => gateway ! GetSecret (id, username, password, sender())
     }
     case LoginWithSecret(id, username, password, secret, replyTo) => secret match {
@@ -43,7 +43,7 @@ object SessionRepository {
 
   object LoginResults {
     sealed trait LoginResult
-    case class AlreadyLogin(username: String) extends LoginResult
+    case class AlreadyIn(username: String) extends LoginResult
     case class IncorrectPassword(username: String) extends LoginResult
     case class UserNotExists(username: String) extends LoginResult
     case class LoginSuccessful(username: String) extends LoginResult

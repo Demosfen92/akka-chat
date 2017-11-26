@@ -9,3 +9,4 @@ package com.demos.chat
 sealed trait ChatResponse
 case class ErrorResponse(message: String) extends ChatResponse
 case object OkResponse extends ChatResponse
+case class ReceivedMessageResponse(username: String, message: String) extends ChatResponse

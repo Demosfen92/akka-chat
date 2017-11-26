@@ -4,6 +4,8 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.demos.chat._
+import com.demos.chat.room.ChatRoom.JoinRoomResults.SuccessfullyJoined
+import com.demos.chat.room.ChatRoom.{JoinRoom, ReceivedMessage, SendMessageToAll}
 import com.demos.chat.session.Session.InitializeSession
 import com.demos.chat.session.SessionRepository.Login
 import com.demos.chat.session.SessionRepository.LoginResults.{LoginResult, LoginSuccessful}
@@ -40,7 +42,18 @@ class Session(id: UUID, gateway: ActorRef) extends Actor {
   }
 
   def authorized(connectionActor: ActorRef, username: String): Receive = {
-    case _ => println("TODO")
+
+    case JoinRoomRequest() => gateway ! JoinRoom(username)
+    case SuccessfullyJoined =>
+      context become joined(connectionActor, username)
+      connectionActor ! OkResponse
+
+    case _ => connectionActor ! ErrorResponse("Unexpected message")
+  }
+
+  def joined(connectionActor: ActorRef, username: String): Receive = {
+    case SendMessageToAllRequest(message) => gateway ! SendMessageToAll(username, message)
+    case ReceivedMessage(author, message) => connectionActor ! ReceivedMessageResponse(author, message)
   }
 }
 
