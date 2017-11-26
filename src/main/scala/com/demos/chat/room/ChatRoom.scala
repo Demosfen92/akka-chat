@@ -1,6 +1,6 @@
 package com.demos.chat.room
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Props, Terminated}
 import com.demos.chat.room.ChatRoom.JoinRoomResults.{AlreadyJoined, SuccessfullyJoined}
 import com.demos.chat.room.ChatRoom.{JoinRoom, ReceivedMessage, SendMessageToAll}
 
@@ -14,17 +14,20 @@ class ChatRoom extends Actor {
 
   override def receive: Receive = chatRoom(Map.empty)
 
-  def chatRoom(members: Map[String, ActorRef]): Receive = {
-    case JoinRoom(username) => members.get(username) match {
+  def chatRoom(members: Map[ActorRef, String]): Receive = {
+    case JoinRoom(username) => members.get(sender()) match {
       case None =>
-        context become chatRoom(members + (username -> sender()))
+        context watch sender()
+        context become chatRoom(members + (sender() -> username))
         sender() ! SuccessfullyJoined
       case Some(_) => sender() ! AlreadyJoined
     }
     case SendMessageToAll(author, message) =>
       members foreach {
-        case (_, recipient) => recipient ! ReceivedMessage(author, message)
+        case (recipient, _) => recipient ! ReceivedMessage(author, message)
       }
+    case Terminated(session) =>
+      context become chatRoom(members - sender())
   }
 }
 
