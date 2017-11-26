@@ -2,7 +2,7 @@ package com.demos.chat.session
 
 import java.util.UUID
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Props, Terminated}
 import com.demos.chat._
 import com.demos.chat.room.ChatRoom.JoinRoomResults.SuccessfullyJoined
 import com.demos.chat.room.ChatRoom.{JoinRoom, ReceivedMessage, SendMessageToAll}
@@ -23,7 +23,9 @@ class Session(id: UUID, gateway: ActorRef) extends Actor {
   override def receive: Receive = notInitialized()
 
   def notInitialized(): Receive = {
-    case InitializeSession(connectionActor) => context become anonymous(connectionActor)
+    case InitializeSession(connectionActor) =>
+      context watch connectionActor
+      context become anonymous(connectionActor)
   }
 
   def anonymous(connectionActor: ActorRef): Receive = {
@@ -38,7 +40,9 @@ class Session(id: UUID, gateway: ActorRef) extends Actor {
       connectionActor ! OkResponse
     case loginError: LoginResult => connectionActor ! ErrorResponse(loginError.toString)
 
-    case _ => connectionActor ! ErrorResponse("Unexpected message")
+    case Terminated(session) => context stop self
+
+    case _ => connectionActor ! ErrorResponse("Invalid state")
   }
 
   def authorized(connectionActor: ActorRef, username: String): Receive = {
@@ -48,12 +52,19 @@ class Session(id: UUID, gateway: ActorRef) extends Actor {
       context become joined(connectionActor, username)
       connectionActor ! OkResponse
 
-    case _ => connectionActor ! ErrorResponse("Unexpected message")
+    case Terminated(session) => context stop self
+
+    case _ => connectionActor ! ErrorResponse("Invalid state")
   }
 
   def joined(connectionActor: ActorRef, username: String): Receive = {
+
     case SendMessageToAllRequest(message) => gateway ! SendMessageToAll(username, message)
     case ReceivedMessage(author, message) => connectionActor ! ReceivedMessageResponse(author, message)
+
+    case Terminated(session) => context stop self
+
+    case _ => connectionActor ! ErrorResponse("Invalid state")
   }
 }
 
