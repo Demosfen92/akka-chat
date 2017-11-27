@@ -1,20 +1,16 @@
 package com.demos.chat
 
-import java.util.concurrent.TimeUnit
-
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
-import akka.pattern.ask
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
-import akka.util.Timeout
 import com.demos.chat.ConnectionActor.Connected
-import com.demos.chat.session.SessionRepository.StartSession
 import io.circe.parser.decode
 
+import scala.concurrent.ExecutionContextExecutor
 import scala.io.StdIn
 
 /**
@@ -25,10 +21,9 @@ import scala.io.StdIn
   */
 object ChatApplication extends JsonUtils {
 
-  implicit val system = ActorSystem("akka-chat-server")
-  implicit val materializer = ActorMaterializer()
-  implicit val executionContext = system.dispatcher
-  implicit val timeout = Timeout(5, TimeUnit.SECONDS)
+  implicit val system: ActorSystem = ActorSystem("akka-chat-server")
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
   def main(args: Array[String]): Unit = {
 
@@ -66,16 +61,14 @@ object ChatApplication extends JsonUtils {
   def chatRoute(gateway: ActorRef) = {
     path("chat") {
       get {
-        onSuccess(gateway.ask(StartSession).mapTo[ActorRef]) {
-          session => handleWebSocketMessages(chatFlow(session))
-        }
+        handleWebSocketMessages(chatFlow(gateway))
       }
     }
   }
 
-  private def chatFlow(session: ActorRef): Flow[Message, Message, NotUsed] = {
+  private def chatFlow(gateway: ActorRef): Flow[Message, Message, NotUsed] = {
 
-    val connectionActor = system.actorOf(ConnectionActor.props(session))
+    val connectionActor = system.actorOf(ConnectionActor.props(gateway))
 
     val incomingMessages: Sink[Message, NotUsed] =
       Flow[Message].map {
@@ -95,7 +88,7 @@ object ChatApplication extends JsonUtils {
           NotUsed
         }
         .map {
-          case response: ChatResponse => response.toTextMessage
+          response: ChatResponse => response.toTextMessage
         }
 
     Flow.fromSinkAndSource(incomingMessages, outgoingMessages)

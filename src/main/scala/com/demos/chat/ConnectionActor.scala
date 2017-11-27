@@ -2,7 +2,7 @@ package com.demos.chat
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.demos.chat.ConnectionActor.Connected
-import com.demos.chat.session.Session.InitializeSession
+import com.demos.chat.session.Session
 
 /**
   *
@@ -10,17 +10,17 @@ import com.demos.chat.session.Session.InitializeSession
   * @author demos
   * @version 1.0
   */
-class ConnectionActor(session: ActorRef) extends Actor {
-
-  override def preStart(): Unit = session ! InitializeSession(self)
+class ConnectionActor(gateway: ActorRef) extends Actor {
 
   override def receive: Receive = notConnected()
 
   def notConnected(): Receive = {
-    case Connected(webSocketActor) => context become connected(webSocketActor)
+    case Connected(webSocketActor) =>
+      val session = context.actorOf(Session.props(self, gateway))
+      context become connected(session, webSocketActor)
   }
 
-  def connected(webSocketActor: ActorRef): Receive = {
+  def connected(session: ActorRef, webSocketActor: ActorRef): Receive = {
     case HeartBeat() => println("Received heartbeat.")
     case chatRequest: ChatRequest => session ! chatRequest
     case chatResponse: ChatResponse => webSocketActor ! chatResponse
@@ -29,6 +29,6 @@ class ConnectionActor(session: ActorRef) extends Actor {
 }
 
 object ConnectionActor {
-  def props(session: ActorRef) = Props(new ConnectionActor(session))
+  def props(gateway: ActorRef) = Props(new ConnectionActor(gateway))
   case class Connected(webSocketActor: ActorRef)
 }

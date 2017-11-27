@@ -4,7 +4,7 @@ import akka.actor.{Actor, Props}
 import com.demos.chat.room.ChatRoom
 import com.demos.chat.room.ChatRoom.{JoinRoom, SendMessageToAll}
 import com.demos.chat.session.SessionRepository
-import com.demos.chat.session.SessionRepository.{Login, StartSession}
+import com.demos.chat.session.SessionRepository.Login
 import com.demos.chat.user.UserRepository
 import com.demos.chat.user.UserRepository.{GetSecret, Register}
 
@@ -22,11 +22,10 @@ class Gateway extends Actor {
 
   override def receive: Receive = {
 
-    case message @ StartSession => sessionRepository.forward(message)
-    case message @ Login(_, _, _) => sessionRepository.forward(message)
+    case message @ Login(_, _) => sessionRepository.forward(message)
 
     case message @ Register(_, _) => userRepository.forward(message)
-    case message @ GetSecret(_, _, _, _) => userRepository.forward(message)
+    case message @ GetSecret(_, _, _) => userRepository.forward(message)
 
     case message @ JoinRoom(_) => chatRoom.forward(message)
     case message @ SendMessageToAll(_, _) => chatRoom.forward(message)

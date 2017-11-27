@@ -29,8 +29,8 @@ class UserRepository extends Actor {
         sender() ! RegistrationSuccessful
       case Left(failedResult) => sender() ! failedResult
     }
-    case GetSecret(id, username, password, replyTo) =>
-      sender() ! LoginWithSecret(id, username, password, users.get(username), replyTo)
+    case GetSecret(username, password, replyTo) =>
+      sender() ! LoginWithSecret(username, password, users.get(username), replyTo)
   }
 }
 
@@ -39,7 +39,7 @@ object UserRepository {
   def props() = Props(new UserRepository())
 
   case class Register(username: String, password: String)
-  case class GetSecret(sessionId: UUID, username: String, password: String, replyTo: ActorRef)
+  case class GetSecret(username: String, password: String, replyTo: ActorRef)
 
   object RegistrationResults {
     sealed trait RegistrationResult
