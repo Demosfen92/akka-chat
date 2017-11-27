@@ -2,8 +2,8 @@ package com.demos.chat.session
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.demos.chat._
-import com.demos.chat.room.ChatRoom.JoinRoomResults.SuccessfullyJoined
-import com.demos.chat.room.ChatRoom.{JoinRoom, ReceivedMessage, SendMessageToAll}
+import com.demos.chat.room.ChatRoom.JoinRoomResults.{JoinRoomResult, SuccessfullyJoined}
+import com.demos.chat.room.ChatRoom._
 import com.demos.chat.session.SessionRepository.Login
 import com.demos.chat.session.SessionRepository.LoginResults.{LoginResult, LoginSuccessful}
 import com.demos.chat.user.UserRepository.Register
@@ -37,17 +37,26 @@ class Session(connectionActor: ActorRef, gateway: ActorRef) extends Actor {
   def authorized(connectionActor: ActorRef, username: String): Receive = {
 
     case JoinRoomRequest() => gateway ! JoinRoom(username)
-    case SuccessfullyJoined =>
+    case SuccessfullyJoined(members) =>
       context become joined(connectionActor, username)
-      connectionActor ! OkResponse
+      connectionActor ! JoinedResponse(members)
+    case joinError: JoinRoomResult => connectionActor ! ErrorResponse(joinError.toString)
 
     case _ => connectionActor ! ErrorResponse("Invalid state")
   }
 
-  def joined(connectionActor: ActorRef, username: String): Receive = {
+  def joined(connectionActor: ActorRef, ownerName: String): Receive = {
 
-    case SendMessageToAllRequest(message) => gateway ! SendMessageToAll(username, message)
+    case MemberJoined(username) => connectionActor ! MemberJoinedResponse(username)
+    case MemberDisconnected(username) => connectionActor ! MemberDisconnectedResponse(username)
+    case NoSuchMembers(username) => connectionActor ! ErrorResponse(s"There is no '$username' in a chat room")
+
+    case SendMessageToAllRequest(message) => gateway ! SendMessageToAll(ownerName, message)
+    case SendDirectMessageRequest(recipient, message) => gateway ! SendDirectMessage(ownerName, recipient, message)
+    case MessageSent => connectionActor ! OkResponse
+
     case ReceivedMessage(author, message) => connectionActor ! ReceivedMessageResponse(author, message)
+    case ReceivedDirectMessage(author, message) => connectionActor ! ReceivedDirectMessageResponse(author, message)
 
     case _ => connectionActor ! ErrorResponse("Invalid state")
   }

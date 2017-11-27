@@ -2,7 +2,7 @@ package com.demos.chat
 
 import akka.actor.{Actor, Props}
 import com.demos.chat.room.ChatRoom
-import com.demos.chat.room.ChatRoom.{JoinRoom, SendMessageToAll}
+import com.demos.chat.room.ChatRoom.{JoinRoom, SendDirectMessage, SendMessageToAll}
 import com.demos.chat.session.SessionRepository
 import com.demos.chat.session.SessionRepository.Login
 import com.demos.chat.user.UserRepository
@@ -29,6 +29,7 @@ class Gateway extends Actor {
 
     case message @ JoinRoom(_) => chatRoom.forward(message)
     case message @ SendMessageToAll(_, _) => chatRoom.forward(message)
+    case message @ SendDirectMessage(_, _, _) => chatRoom.forward(message)
   }
 }
 

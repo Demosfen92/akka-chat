@@ -12,3 +12,4 @@ case class RegistrationRequest(username: String, password: String) extends ChatR
 case class LoginRequest(username: String, password: String) extends ChatRequest
 case class JoinRoomRequest() extends ChatRequest
 case class SendMessageToAllRequest(message: String) extends ChatRequest
+case class SendDirectMessageRequest(recipient: String, message: String) extends ChatRequest
