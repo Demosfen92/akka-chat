@@ -1,13 +1,13 @@
 package com.demos.chat
 
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, PoisonPill}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
-import com.demos.chat.ConnectionActor.Connected
+import com.demos.chat.ConnectionActor.{Connected, ConnectionClosed}
 import io.circe.parser.decode
 
 import scala.concurrent.ExecutionContextExecutor
@@ -78,7 +78,7 @@ object ChatApplication extends JsonUtils {
             case Left(error) => ErrorResponse(error.getMessage)
           }
         case _ => ErrorResponse("Unsupported operation")
-      }.to(Sink.actorRef(connectionActor, PoisonPill))
+      }.to(Sink.actorRef(connectionActor, ConnectionClosed))
 
     val outgoingMessages: Source[Message, NotUsed] =
       Source

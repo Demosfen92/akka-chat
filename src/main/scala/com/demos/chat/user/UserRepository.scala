@@ -1,11 +1,9 @@
 package com.demos.chat.user
 
-import java.util.UUID
-
 import akka.actor.{Actor, ActorRef, Props}
 import com.demos.chat.session.SessionRepository.LoginWithSecret
-import com.demos.chat.user.UserRepository.{GetSecret, Register}
 import com.demos.chat.user.UserRepository.RegistrationResults._
+import com.demos.chat.user.UserRepository.{GetSecret, Register}
 
 /**
   *

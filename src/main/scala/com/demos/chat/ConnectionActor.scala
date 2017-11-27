@@ -1,7 +1,7 @@
 package com.demos.chat
 
-import akka.actor.{Actor, ActorRef, Props}
-import com.demos.chat.ConnectionActor.Connected
+import akka.actor.{Actor, ActorRef, PoisonPill, Props}
+import com.demos.chat.ConnectionActor.{Connected, ConnectionClosed}
 import com.demos.chat.session.Session
 
 /**
@@ -11,6 +11,8 @@ import com.demos.chat.session.Session
   * @version 1.0
   */
 class ConnectionActor(gateway: ActorRef) extends Actor {
+
+  override def postStop(): Unit = super.postStop()
 
   override def receive: Receive = notConnected()
 
@@ -24,6 +26,9 @@ class ConnectionActor(gateway: ActorRef) extends Actor {
     case HeartBeat() => println("Received heartbeat.")
     case chatRequest: ChatRequest => session ! chatRequest
     case chatResponse: ChatResponse => webSocketActor ! chatResponse
+    case ConnectionClosed =>
+      webSocketActor ! PoisonPill
+      context stop self
     case wrong => println(s"ConnectionActor: received wrong message [${wrong.toString}, ${sender().toString()}]")
   }
 }
@@ -31,4 +36,5 @@ class ConnectionActor(gateway: ActorRef) extends Actor {
 object ConnectionActor {
   def props(gateway: ActorRef) = Props(new ConnectionActor(gateway))
   case class Connected(webSocketActor: ActorRef)
+  case object ConnectionClosed
 }
