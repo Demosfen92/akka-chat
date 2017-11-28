@@ -5,9 +5,11 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import com.demos.chat.ConnectionActor.{Connected, ConnectionClosed}
+import com.demos.chat.messages.{ChatRequest, ChatResponse, ErrorResponse, JsonUtils}
 import io.circe.parser.decode
 
 import scala.concurrent.ExecutionContextExecutor
@@ -40,14 +42,14 @@ object ChatApplication extends JsonUtils {
       .onComplete(_ => system.terminate())
   }
 
-  def helloRoute =
+  def helloRoute: Route =
     path("hello") {
       get {
         complete("Hello")
       }
     }
 
-  def simpleWebSocketRoute =
+  def simpleWebSocketRoute: Route =
     path("ws-simple") {
       get {
         val echoFlow: Flow[Message, Message, _] = Flow[Message].map {
@@ -58,7 +60,7 @@ object ChatApplication extends JsonUtils {
       }
     }
 
-  def chatRoute(gateway: ActorRef) = {
+  def chatRoute(gateway: ActorRef): Route = {
     path("chat") {
       get {
         handleWebSocketMessages(chatFlow(gateway))

@@ -2,17 +2,17 @@ package com.demos.chat
 
 import akka.actor.{Actor, ActorRef, PoisonPill, Props}
 import com.demos.chat.ConnectionActor.{Connected, ConnectionClosed}
+import com.demos.chat.messages.{ChatRequest, ChatResponse, HeartBeat}
 import com.demos.chat.session.Session
 
 /**
-  *
+  * Intermediate actor created for each client in order
+  * to receive incoming messages and send back outgoing messages.
   *
   * @author demos
   * @version 1.0
   */
 class ConnectionActor(gateway: ActorRef) extends Actor {
-
-  override def postStop(): Unit = super.postStop()
 
   override def receive: Receive = notConnected()
 
@@ -29,7 +29,7 @@ class ConnectionActor(gateway: ActorRef) extends Actor {
     case ConnectionClosed =>
       webSocketActor ! PoisonPill
       context stop self
-    case wrong => println(s"ConnectionActor: received wrong message [${wrong.toString}, ${sender().toString()}]")
+    case unexpected => println(s"ConnectionActor: received unexpected message [${unexpected.toString}, ${sender().toString()}]")
   }
 }
 

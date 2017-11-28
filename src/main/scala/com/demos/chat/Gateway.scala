@@ -9,7 +9,7 @@ import com.demos.chat.user.UserRepository
 import com.demos.chat.user.UserRepository.{GetSecret, Register}
 
 /**
-  *
+  * Facade actor for forwarding messages to other actors.
   *
   * @author demos
   * @version 1.0

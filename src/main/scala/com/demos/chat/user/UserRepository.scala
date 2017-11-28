@@ -6,7 +6,7 @@ import com.demos.chat.user.UserRepository.RegistrationResults._
 import com.demos.chat.user.UserRepository.{GetSecret, Register}
 
 /**
-  *
+  * Actor that stores registered users.
   *
   * @author demos
   * @version 1.0

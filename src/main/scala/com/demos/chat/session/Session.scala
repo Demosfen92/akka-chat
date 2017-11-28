@@ -1,7 +1,7 @@
 package com.demos.chat.session
 
 import akka.actor.{Actor, ActorRef, Props}
-import com.demos.chat._
+import com.demos.chat.messages._
 import com.demos.chat.room.ChatRoom.JoinRoomResults.{JoinRoomResult, SuccessfullyJoined}
 import com.demos.chat.room.ChatRoom._
 import com.demos.chat.session.SessionRepository.Login
@@ -10,7 +10,11 @@ import com.demos.chat.user.UserRepository.Register
 import com.demos.chat.user.UserRepository.RegistrationResults.{RegistrationResult, RegistrationSuccessful}
 
 /**
+  * Session actor. Defines allowed messages per session state.
   *
+  * anonymous - requires client to login
+  * authorized - requires client to join chat room
+  * joined - allows client to send and receive messages from other clients.
   *
   * @author demos
   * @version 1.0

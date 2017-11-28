@@ -5,42 +5,42 @@ import com.demos.chat.room.ChatRoom.JoinRoomResults.{AlreadyJoined, Successfully
 import com.demos.chat.room.ChatRoom._
 
 /**
-  *
+  * Chat room actor. Stores joined clients.
   *
   * @author demos
   * @version 1.0
   */
 class ChatRoom extends Actor {
 
-  override def receive: Receive = chatRoom(Map.empty)
+  override def receive: Receive = chatRoom(Map.empty, Map.empty)
 
-  def chatRoom(members: Map[ActorRef, String]): Receive = {
-    case JoinRoom(username) => members.get(sender()) match {
+  def chatRoom(sessionsToName: Map[ActorRef, String], nameToSession: Map[String, ActorRef]): Receive = {
+    case JoinRoom(username) => sessionsToName.get(sender()) match {
       case None =>
-        context watch sender()
-        val updatedMembers = members + (sender() -> username)
-        context become chatRoom(updatedMembers)
+        val updatedMembers = sessionsToName + (sender() -> username)
         sender() ! SuccessfullyJoined(updatedMembers.values)
-        members foreach {
+        sessionsToName foreach {
           case (recipient, _) => recipient ! MemberJoined(username)
         }
+        context watch sender()
+        context become chatRoom(updatedMembers, nameToSession + (username -> sender()))
       case Some(_) => sender() ! AlreadyJoined(username)
     }
     case SendMessageToAll(author, message) =>
-      members foreach {
+      sessionsToName foreach {
         case (recipient, _) => recipient ! ReceivedMessage(author, message)
       }
     case SendDirectMessage(author, recipientName, message) =>
-      members.find(_._2 == recipientName) match {
-        case Some((recipient, _)) =>
+      nameToSession.get(recipientName) match {
+        case Some(recipient) =>
           recipient ! ReceivedDirectMessage(author, message)
           sender() ! MessageSent
         case None => sender() ! NoSuchMembers(recipientName)
       }
     case Terminated(_) =>
-      val updatedMembers = members - sender()
-      context become chatRoom(updatedMembers)
-      val username = members(sender())
+      val username = sessionsToName(sender())
+      val updatedMembers = sessionsToName - sender()
+      context become chatRoom(updatedMembers, nameToSession - username)
       updatedMembers foreach {
         case (recipient, _) => recipient ! MemberDisconnected(username)
       }

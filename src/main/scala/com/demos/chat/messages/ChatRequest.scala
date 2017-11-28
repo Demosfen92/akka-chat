@@ -1,7 +1,7 @@
-package com.demos.chat
+package com.demos.chat.messages
 
 /**
-  *
+  * Incoming messages.
   *
   * @author demos
   * @version 1.0

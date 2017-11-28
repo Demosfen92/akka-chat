@@ -6,32 +6,34 @@ import com.demos.chat.session.SessionRepository.{Login, LoginWithSecret}
 import com.demos.chat.user.UserRepository.GetSecret
 
 /**
-  *
+  * Actor that stores currently authorized clients.
   *
   * @author demos
   * @version 1.0
   */
 class SessionRepository(gateway: ActorRef) extends Actor {
 
-  override def receive: Receive = sessionRepository(Map.empty)
+  override def receive: Receive = sessionRepository(Map.empty, Set.empty)
 
-  def sessionRepository(sessions: Map[String, ActorRef]): Receive = {
-    case Login(username, password) => sessions.get(username) match {
-      case Some(_) => sender() ! AlreadyIn(username)
-      case None => gateway ! GetSecret (username, password, sender())
-    }
+  def sessionRepository(sessions: Map[ActorRef, String], users: Set[String]): Receive = {
+    case Login(username, password) =>
+      if (users.contains(username)) {
+        sender() ! AlreadyIn(username)
+      } else {
+        gateway ! GetSecret(username, password, sender())
+      }
     case LoginWithSecret(username, password, secret, replyTo) => secret match {
       case None => replyTo ! UserNotExists(username)
       case Some(storedPassword) if storedPassword != password => replyTo ! IncorrectPassword(username)
       case _ =>
         context watch replyTo
-        context become sessionRepository(sessions + (username -> replyTo))
+        context become sessionRepository(sessions + (replyTo -> username), users + username)
         replyTo ! LoginSuccessful(username)
     }
     case Terminated(session) =>
-      val username = sessions.find(_._2 == session).get._1
+      val username = sessions(session)
       println(s"$username disconnected")
-      context become sessionRepository(sessions - username)
+      context become sessionRepository(sessions - session, users - username)
   }
 }
 
