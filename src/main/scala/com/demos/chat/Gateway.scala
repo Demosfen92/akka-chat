@@ -10,9 +10,6 @@ import com.demos.chat.user.UserRepository.{GetSecret, Register}
 
 /**
   * Facade actor for forwarding messages to other actors.
-  *
-  * @author demos
-  * @version 1.0
   */
 class Gateway extends Actor {
 
@@ -22,14 +19,14 @@ class Gateway extends Actor {
 
   override def receive: Receive = {
 
-    case message @ Login(_, _) => sessionRepository.forward(message)
+    case message@Login(_, _) => sessionRepository.forward(message)
 
-    case message @ Register(_, _) => userRepository.forward(message)
-    case message @ GetSecret(_, _, _) => userRepository.forward(message)
+    case message@Register(_, _)     => userRepository.forward(message)
+    case message@GetSecret(_, _, _) => userRepository.forward(message)
 
-    case message @ JoinRoom(_) => chatRoom.forward(message)
-    case message @ SendMessageToAll(_, _) => chatRoom.forward(message)
-    case message @ SendDirectMessage(_, _, _) => chatRoom.forward(message)
+    case message@JoinRoom(_)                => chatRoom.forward(message)
+    case message@SendMessageToAll(_, _)     => chatRoom.forward(message)
+    case message@SendDirectMessage(_, _, _) => chatRoom.forward(message)
   }
 }
 

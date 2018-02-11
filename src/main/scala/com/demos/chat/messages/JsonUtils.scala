@@ -7,9 +7,6 @@ import io.circe.{Decoder, Encoder}
 
 /**
   * Trait with circe encoders/decoders for JSON.
-  *
-  * @author demos
-  * @version 1.0
   */
 trait JsonUtils {
 

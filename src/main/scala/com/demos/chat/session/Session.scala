@@ -15,9 +15,6 @@ import com.demos.chat.user.UserRepository.RegistrationResults.{RegistrationResul
   * anonymous - requires client to login
   * authorized - requires client to join chat room
   * joined - allows client to send and receive messages from other clients.
-  *
-  * @author demos
-  * @version 1.0
   */
 class Session(connectionActor: ActorRef, gateway: ActorRef) extends Actor {
 
@@ -26,40 +23,40 @@ class Session(connectionActor: ActorRef, gateway: ActorRef) extends Actor {
   def anonymous(connectionActor: ActorRef): Receive = {
 
     case RegistrationRequest(username, password) => gateway ! Register(username, password)
-    case RegistrationSuccessful => connectionActor ! OkResponse
-    case registrationError: RegistrationResult => connectionActor ! ErrorResponse(registrationError.toString)
+    case RegistrationSuccessful                  => connectionActor ! OkResponse
+    case registrationError: RegistrationResult   => connectionActor ! ErrorResponse(registrationError.toString)
 
     case LoginRequest(username, password) => gateway ! Login(username, password)
-    case LoginSuccessful(username) =>
+    case LoginSuccessful(username)        =>
       context become authorized(connectionActor, username)
       connectionActor ! OkResponse
-    case loginError: LoginResult => connectionActor ! ErrorResponse(loginError.toString)
+    case loginError: LoginResult          => connectionActor ! ErrorResponse(loginError.toString)
 
     case _ => connectionActor ! ErrorResponse("Invalid state")
   }
 
   def authorized(connectionActor: ActorRef, username: String): Receive = {
 
-    case JoinRoomRequest() => gateway ! JoinRoom(username)
+    case JoinRoomRequest()           => gateway ! JoinRoom(username)
     case SuccessfullyJoined(members) =>
       context become joined(connectionActor, username)
       connectionActor ! JoinedResponse(members)
-    case joinError: JoinRoomResult => connectionActor ! ErrorResponse(joinError.toString)
+    case joinError: JoinRoomResult   => connectionActor ! ErrorResponse(joinError.toString)
 
     case _ => connectionActor ! ErrorResponse("Invalid state")
   }
 
   def joined(connectionActor: ActorRef, ownerName: String): Receive = {
 
-    case MemberJoined(username) => connectionActor ! MemberJoinedResponse(username)
+    case MemberJoined(username)       => connectionActor ! MemberJoinedResponse(username)
     case MemberDisconnected(username) => connectionActor ! MemberDisconnectedResponse(username)
-    case NoSuchMembers(username) => connectionActor ! ErrorResponse(s"There is no '$username' in a chat room")
+    case NoSuchMembers(username)      => connectionActor ! ErrorResponse(s"There is no '$username' in a chat room")
 
-    case SendMessageToAllRequest(message) => gateway ! SendMessageToAll(ownerName, message)
+    case SendMessageToAllRequest(message)             => gateway ! SendMessageToAll(ownerName, message)
     case SendDirectMessageRequest(recipient, message) => gateway ! SendDirectMessage(ownerName, recipient, message)
-    case MessageSent => connectionActor ! OkResponse
+    case MessageSent                                  => connectionActor ! OkResponse
 
-    case ReceivedMessage(author, message) => connectionActor ! ReceivedMessageResponse(author, message)
+    case ReceivedMessage(author, message)       => connectionActor ! ReceivedMessageResponse(author, message)
     case ReceivedDirectMessage(author, message) => connectionActor ! ReceivedDirectMessageResponse(author, message)
 
     case _ => connectionActor ! ErrorResponse("Invalid state")

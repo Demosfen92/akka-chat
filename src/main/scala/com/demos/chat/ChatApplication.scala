@@ -17,9 +17,6 @@ import scala.io.StdIn
 
 /**
   * Entry point for the whole application.
-  *
-  * @author demos
-  * @version 1.0
   */
 object ChatApplication extends JsonUtils {
 
@@ -31,7 +28,7 @@ object ChatApplication extends JsonUtils {
 
     val gateway = system.actorOf(Gateway.props(), "gateway")
 
-    val routes = helloRoute ~ simpleWebSocketRoute ~ chatRoute(gateway)
+    val routes = helloRoute ~ chatRoute(gateway)
     val bindingFuture = Http().bindAndHandle(routes, "127.0.0.1", 8080)
 
     println("RETURN to stop...")
@@ -49,17 +46,6 @@ object ChatApplication extends JsonUtils {
       }
     }
 
-  def simpleWebSocketRoute: Route =
-    path("ws-simple") {
-      get {
-        val echoFlow: Flow[Message, Message, _] = Flow[Message].map {
-          case TextMessage.Strict(text) => TextMessage(s"Received message: $text!")
-          case _ => TextMessage("Unsupported operation")
-        }
-        handleWebSocketMessages(echoFlow)
-      }
-    }
-
   def chatRoute(gateway: ActorRef): Route = {
     path("chat") {
       get {
@@ -72,19 +58,18 @@ object ChatApplication extends JsonUtils {
 
     val connectionActor = system.actorOf(ConnectionActor.props(gateway))
 
-    val incomingMessages: Sink[Message, NotUsed] =
-      Flow[Message].map {
-        case TextMessage.Strict(messageText) =>
-          decode[ChatRequest](messageText) match {
-            case Right(request) => request
-            case Left(error) => ErrorResponse(error.getMessage)
-          }
-        case _ => ErrorResponse("Unsupported operation")
-      }.to(Sink.actorRef(connectionActor, ConnectionClosed))
+    val incomingMessages: Sink[Message, NotUsed] = Flow[Message]
+      .map {
+        case TextMessage.Strict(messageText) => decode[ChatRequest](messageText) match {
+          case Right(request) => request
+          case Left(error)    => ErrorResponse(error.getMessage)
+        }
+        case _                               => ErrorResponse("Unsupported operation")
+      }
+      .to(Sink.actorRef(connectionActor, ConnectionClosed))
 
     val outgoingMessages: Source[Message, NotUsed] =
-      Source
-        .actorRef[ChatResponse](10, OverflowStrategy.fail)
+      Source.actorRef[ChatResponse](10, OverflowStrategy.fail)
         .mapMaterializedValue { webSocketActor =>
           connectionActor ! Connected(webSocketActor)
           NotUsed

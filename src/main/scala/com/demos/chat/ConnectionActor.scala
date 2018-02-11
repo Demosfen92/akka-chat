@@ -8,9 +8,6 @@ import com.demos.chat.session.Session
 /**
   * Intermediate actor created for each client in order
   * to receive incoming messages and send back outgoing messages.
-  *
-  * @author demos
-  * @version 1.0
   */
 class ConnectionActor(gateway: ActorRef) extends Actor {
 
@@ -23,13 +20,18 @@ class ConnectionActor(gateway: ActorRef) extends Actor {
   }
 
   def connected(session: ActorRef, webSocketActor: ActorRef): Receive = {
+
     case HeartBeat() => println("Received heartbeat.")
-    case chatRequest: ChatRequest => session ! chatRequest
+
+    case chatRequest: ChatRequest   => session ! chatRequest
     case chatResponse: ChatResponse => webSocketActor ! chatResponse
+
     case ConnectionClosed =>
       webSocketActor ! PoisonPill
       context stop self
-    case unexpected => println(s"ConnectionActor: received unexpected message [${unexpected.toString}, ${sender().toString()}]")
+
+    case unexpected =>
+      println(s"ConnectionActor: received unexpected message [${ unexpected.toString }, ${ sender().toString() }]")
   }
 }
 

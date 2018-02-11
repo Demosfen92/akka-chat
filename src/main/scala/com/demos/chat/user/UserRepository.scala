@@ -7,26 +7,24 @@ import com.demos.chat.user.UserRepository.{GetSecret, Register}
 
 /**
   * Actor that stores registered users.
-  *
-  * @author demos
-  * @version 1.0
   */
 class UserRepository extends Actor {
 
   override def receive: Receive = userRepository(Map.empty)
 
   def userRepository(users: Map[String, String]): Receive = {
-    case Register(username, password) => ((username, password) match {
-      case (name, _) if name.isEmpty => Left(InvalidUsername)
-      case (_, pass) if pass.isEmpty => Left(InvalidPassword)
-      case (name, _) if users.get(name).isDefined => Left(UserAlreadyExists)
-      case message => Right(message)
-    }) match {
-      case Right((user, pass)) =>
-        context become userRepository(users + (user -> pass))
-        sender() ! RegistrationSuccessful
-      case Left(failedResult) => sender() ! failedResult
-    }
+    case Register(username, password)           =>
+      ((username, password) match {
+        case (name, _) if name.isEmpty              => Left(InvalidUsername)
+        case (_, pass) if pass.isEmpty              => Left(InvalidPassword)
+        case (name, _) if users.get(name).isDefined => Left(UserAlreadyExists)
+        case message                                => Right(message)
+      }) match {
+        case Right((user, pass)) =>
+          context become userRepository(users + (user -> pass))
+          sender() ! RegistrationSuccessful
+        case Left(failedResult)  => sender() ! failedResult
+      }
     case GetSecret(username, password, replyTo) =>
       sender() ! LoginWithSecret(username, password, users.get(username), replyTo)
   }

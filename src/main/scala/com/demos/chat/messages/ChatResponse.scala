@@ -2,9 +2,6 @@ package com.demos.chat.messages
 
 /**
   * Outgoing messages.
-  *
-  * @author demos
-  * @version 1.0
   */
 sealed trait ChatResponse
 case class ErrorResponse(message: String) extends ChatResponse

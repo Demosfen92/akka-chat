@@ -2,9 +2,6 @@ package com.demos.chat.messages
 
 /**
   * Incoming messages.
-  *
-  * @author demos
-  * @version 1.0
   */
 sealed trait ChatRequest
 case class HeartBeat() extends ChatRequest
