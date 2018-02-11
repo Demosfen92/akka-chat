@@ -50,11 +50,11 @@ class Session(connectionActor: ActorRef, gateway: ActorRef) extends Actor {
 
     case MemberJoined(username)       => connectionActor ! MemberJoinedResponse(username)
     case MemberDisconnected(username) => connectionActor ! MemberDisconnectedResponse(username)
-    case NoSuchMembers(username)      => connectionActor ! ErrorResponse(s"There is no '$username' in a chat room")
 
     case SendMessageToAllRequest(message)             => gateway ! SendMessageToAll(ownerName, message)
     case SendDirectMessageRequest(recipient, message) => gateway ! SendDirectMessage(ownerName, recipient, message)
     case MessageSent                                  => connectionActor ! OkResponse
+    case NoSuchMembers(username)                      => connectionActor ! ErrorResponse(s"There is no '$username' in a chat room")
 
     case ReceivedMessage(author, message)       => connectionActor ! ReceivedMessageResponse(author, message)
     case ReceivedDirectMessage(author, message) => connectionActor ! ReceivedDirectMessageResponse(author, message)
